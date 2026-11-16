@@ -43,6 +43,7 @@ Pages are selected from the sidebar.
 | 🔮 Predict | Can we predict an aldehyde we have never run? Model comparison with leave-one-aldehyde-out validation |
 | 🧭 Explore freely | Free chart builder with filters; measured vs derived points are marked |
 | 📋 Design rules & data | Summary of the rules, plus CSV downloads |
+| 📖 Glossary | What does a term mean? Searchable table of 23 terms in plain language |
 
 ## Main findings
 
@@ -53,7 +54,7 @@ Pages are selected from the sidebar.
 
 ## Does the dashboard need documentation?
 
-**For everyday use, no:** a *How to use* panel, a plain-language glossary, tooltips on every control and captions under every chart are built into the app.
+**For everyday use, no:** sidebar navigation with a one-line description of each page, a searchable plain-language glossary page, tooltips on every control and captions under every chart are built into the app.
 **For interpretation, yes:** two things cannot be seen from the charts alone and are documented here and in the app: (1) only 42 rows are independent measurements, and (2) the predictive model's assumptions (first-order kinetics at 60 min, additive effects on ln k, σₚ as the only aldehyde descriptor).
 
 ## Method notes

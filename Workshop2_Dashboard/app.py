@@ -198,22 +198,40 @@ anchors = df[df["is_anchor"]].copy()
 anchors["k"] = k_eff(anchors["conversion_percent"])
 decimals, max_spread, n_unique_curves, n_curves = provenance_checks(df)
 
+# ---------- Shared results (used by several pages) ----------
+paired = anchors.pivot_table(index=["aldehyde_R_group", "amine_name"], columns="solvent",
+                             values="conversion_percent").reset_index()
+diff = paired["MTBE"] - paired["DCM"]
+ratio = k_eff(paired["MTBE"]) / k_eff(paired["DCM"])
+tf = df[df["time_min"] == ANCHOR_TIME].pivot_table(index=PAIR_KEYS, columns="temperature_C",
+                                                   values="conversion_percent")
+tf = tf[(tf[15] > 2) & (tf[35] < 98)]
+tf_ratio = k_eff(tf[35]) / k_eff(tf[15])
+ea_implied = R_GAS * np.log(tf_ratio) / (1 / 288.15 - 1 / 308.15) / 1000
+summary, cv_preds, betas = compare_models(anchors)
+best_name = summary.loc[summary["Held-out MAE (pp)"].idxmin(), "Model"]
+
+PAGES = {
+    "🔍 Data check": "What is really measured?",
+    "🗺️ Reactivity map": "The measured results",
+    "🔬 Effects": "Mechanism, sterics, electronics, solvent",
+    "⏱️ Time & temperature": "Derived curves",
+    "🔮 Predict": "Model + validation",
+    "🧭 Explore freely": "Build your own chart",
+    "📋 Design rules & data": "Summary + downloads",
+}
+
 with st.sidebar:
-    st.header("🧪 About")
+    st.header("🧪 Imine explorer")
+    page = st.radio("Go to", list(PAGES), key="page",
+                    captions=list(PAGES.values()), label_visibility="collapsed")
+    st.divider()
     st.markdown(
-        "Imine condensation of 7 para-substituted benzaldehydes with 3 butylamines in DCM or MTBE "
+        "**About.** Imine condensation of 7 para-substituted benzaldehydes with 3 butylamines in DCM or MTBE "
         "(J. Chem. Educ. 2023, 100, 4456).\n\n"
         "**Key finding about the data:** only the 42 values at **25 °C / 60 min** behave like independent "
         "measurements. Every other value is a fixed function of that one number (see *Data check*). "
-        "Charts mark derived data clearly.\n\n"
-        "**Tabs**\n"
-        "1. Data check: what is really measured\n"
-        "2. Reactivity map: the measured results\n"
-        "3. Effects: mechanism, sterics, electronics, solvent\n"
-        "4. Time & temperature: derived curves\n"
-        "5. Predict: model + validation\n"
-        "6. Explore freely: build your own chart\n"
-        "7. Design rules & data"
+        "Charts mark derived data clearly."
     )
     with st.expander("📖 Glossary (plain language)"):
         st.markdown(
@@ -241,10 +259,8 @@ with st.sidebar:
 st.title("🧪 Imine condensation explorer")
 st.caption("Aldehyde + amine → imine + H₂O. Goal: find design rules for reactivity and predict untested reactions.")
 
-tab_check, tab_map, tab_effects, tab_time, tab_predict, tab_free, tab_rules = st.tabs(
-    ["🔍 Data check", "🗺️ Reactivity map", "🔬 Effects", "⏱️ Time & temperature", "🔮 Predict",
-     "🧭 Explore freely", "📋 Design rules & data"]
-)
+st.header(page)
+page_names = list(PAGES)
 
 MECHANISM_SVG = """
 <div style="overflow-x:auto">
@@ -290,7 +306,7 @@ MECHANISM_SVG = """
 """
 
 # ============================== 1. Data check ==============================
-with tab_check:
+if page == page_names[0]:
     st.subheader("How much independent information does the dataset contain?")
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Rows", f"{len(df)}", help="7 aldehydes × 3 amines × 2 solvents × 3 temperatures × 4 times")
@@ -315,9 +331,12 @@ with tab_check:
         collapse = df.copy()
         collapse["Temperature"] = collapse["temperature_C"].map(lambda x: f"{x:g} °C")
         col_fig = px.scatter(collapse, x="anchor", y="conversion_percent", color="Temperature",
-                             facet_col="time_min", facet_col_wrap=4, opacity=0.8,
-                             hover_data=PAIR_KEYS, labels={**LABELS, "anchor": "Conv. at 25 °C/60 min (%)"})
-        col_fig.for_each_annotation(lambda a: a.update(text=a.text.replace("time_min", "t (min)")))
+                             facet_col="time_min", facet_col_wrap=2, opacity=0.8, height=560,
+                             facet_col_spacing=0.08, facet_row_spacing=0.12,
+                             category_orders={"time_min": sorted(df["time_min"].unique()),
+                                              "Temperature": ["15 °C", "25 °C", "35 °C"]},
+                             hover_data=PAIR_KEYS, labels={**LABELS, "anchor": "Value at 25 °C/60 min (%)"})
+        col_fig.for_each_annotation(lambda a: a.update(text=f"t = {a.text.split('=')[-1]} min"))
         st.plotly_chart(col_fig, width="stretch")
         st.caption(f"Plotting each value against the same reaction's 25 °C / 60 min value collapses all 504 points "
                    f"onto 12 smooth curves. Reactions with the same 25 °C / 60 min value have identical curves at every "
@@ -333,7 +352,7 @@ with tab_check:
     )
 
 # ============================== 2. Reactivity map ==============================
-with tab_map:
+if page == page_names[1]:
     st.subheader("Measured conversion: aldehyde × amine × solvent")
     m1, m2 = st.columns([3, 2])
     with m1:
@@ -384,7 +403,7 @@ with tab_map:
     st.caption(f"Measured conversion after 60 min at 25 °C in {rx_solv}: **{row['conversion_percent']:g}%**.")
 
 # ============================== 3. Effects ==============================
-with tab_effects:
+if page == page_names[2]:
     st.caption("All comparisons on this tab use the 42 measured values (25 °C, 60 min) and compare reactions that differ in only one factor.")
 
     st.subheader("0 · Mechanism: why each factor matters")
@@ -393,8 +412,11 @@ with tab_effects:
 
     st.subheader("1 · Amine: steric hindrance")
     amine_fig = px.line(anchors, x="amine_name", y="conversion_percent", color="aldehyde_R_group",
-                        facet_col="solvent", markers=True, category_orders=ORDERS, labels=LABELS)
+                        facet_col="solvent", facet_col_spacing=0.08, markers=True,
+                        category_orders=ORDERS, labels=LABELS)
     amine_fig.update_yaxes(range=[0, 105])
+    amine_fig.update_xaxes(tickvals=AMINE_ORDER, ticktext=["n-Bu", "sec-Bu", "tert-Bu"])
+    amine_fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
     st.plotly_chart(amine_fig, width="stretch")
     drops = anchors.pivot_table(index=["aldehyde_R_group", "solvent"], columns="amine_name", values="conversion_percent")
     n_mono = int(((drops["n-butylamine"] >= drops["sec-butylamine"]) & (drops["sec-butylamine"] >= drops["tert-butylamine"])).sum())
@@ -432,8 +454,6 @@ with tab_effects:
                "Very low conversions (tert-butylamine, < 2%) are reported only to 0.1–1%, so their k is imprecise.")
 
     st.subheader("3 · Solvent: can MTBE replace DCM?")
-    paired = anchors.pivot_table(index=["aldehyde_R_group", "amine_name"], columns="solvent",
-                                 values="conversion_percent").reset_index()
     sol_fig = px.scatter(paired, x="DCM", y="MTBE", color="amine_name", text="aldehyde_R_group",
                          category_orders=ORDERS, labels={"DCM": "Conversion in DCM (%)",
                                                          "MTBE": "Conversion in MTBE (%)", **LABELS})
@@ -441,8 +461,6 @@ with tab_effects:
     sol_fig.add_scatter(x=[0, 100], y=[0, 100], mode="lines", line=dict(dash="dash", color="grey"), name="equal")
     sol_fig.update_layout(xaxis_range=[-3, 103], yaxis_range=[-3, 103])
     st.plotly_chart(sol_fig, width="stretch")
-    diff = paired["MTBE"] - paired["DCM"]
-    ratio = k_eff(paired["MTBE"]) / k_eff(paired["DCM"])
     w1, w2, w3 = st.columns(3)
     w1.metric("MTBE ≥ DCM", f"{(diff >= 0).sum()} of {len(diff)} pairs")
     w2.metric("Median difference", f"{diff.median():+.0f} pp")
@@ -451,7 +469,7 @@ with tab_effects:
                "it depends on the aldehyde–amine pair.")
 
 # ============================== 4. Time & temperature ==============================
-with tab_time:
+if page == page_names[3]:
     st.warning("Everything on this tab uses **derived** values (see *Data check*). It shows the shape of the curves the "
                "dataset assumes; it is not independent kinetic evidence.")
     t1, t2, t3 = st.columns(3)
@@ -475,11 +493,6 @@ with tab_time:
                "(second order, or first order approaching an incomplete plateau). Fitting a single k per curve is therefore an approximation.")
 
     st.subheader("Temperature factor implied by the dataset")
-    tf = df[df["time_min"] == ANCHOR_TIME].pivot_table(index=PAIR_KEYS, columns="temperature_C",
-                                                       values="conversion_percent")
-    tf = tf[(tf[15] > 2) & (tf[35] < 98)]
-    tf_ratio = k_eff(tf[35]) / k_eff(tf[15])
-    ea_implied = R_GAS * np.log(tf_ratio) / (1 / 288.15 - 1 / 308.15) / 1000
     z1, z2 = st.columns(2)
     z1.metric("Median k(35 °C) / k(15 °C)", f"{tf_ratio.median():.2f}×")
     z2.metric("Implied apparent Ea", f"{ea_implied.median():.0f} kJ/mol",
@@ -488,15 +501,13 @@ with tab_time:
                "so it should be confirmed by measuring at other temperatures before it is used.")
 
 # ============================== 5. Predict ==============================
-with tab_predict:
+if page == page_names[4]:
     st.markdown(
         "A **physics-informed model** for the 42 measured values: "
         "**ln k = amine effect + solvent effect + amine×solvent + f(σₚ)**, with conversion = 100(1 − e^(−k·60)). "
         "Four versions of f(σₚ) are compared by **leave-one-aldehyde-out** cross-validation: the model is refitted "
         "without one aldehyde and asked to predict it, which tests the real use case of a substituent never run before."
     )
-    summary, cv_preds, betas = compare_models(anchors)
-    best_name = summary.loc[summary["Held-out MAE (pp)"].idxmin(), "Model"]
     st.dataframe(summary.round(1).style.apply(
         lambda r: ["font-weight: bold" if r["Model"] == best_name else "" for _ in r], axis=1),
         width="stretch", hide_index=True)
@@ -572,7 +583,7 @@ FREE_COLUMNS = {
 }
 CATEGORICAL = {"temperature_C", "aldehyde_R_group", "amine_name", "solvent", "Data type"}
 
-with tab_free:
+if page == page_names[5]:
     st.markdown("Filter the full dataset and build any chart. **★ = measured** (25 °C, 60 min), "
                 "**● = derived** from the measured value (see *Data check*).")
     times = sorted(df["time_min"].unique().tolist())
@@ -616,7 +627,7 @@ with tab_free:
                 plot_df[col] = plot_df[col].map(lambda v: f"{v:g} °C")
         labels = {**FREE_COLUMNS, "conversion_percent": "Conversion (%)", "k_eff": "Effective k (min⁻¹)"}
         orders = {**ORDERS, "temperature_C": [f"{t:g} °C" for t in temps], "Data type": ["Measured", "Derived"]}
-        common = dict(x=x_col, y=y_col, color=colour_col, facet_col=facet_col,
+        common = dict(x=x_col, y=y_col, color=colour_col, facet_col=facet_col, facet_col_spacing=0.06,
                       category_orders=orders, labels=labels)
         if chart == "Box":
             free_fig = px.box(plot_df, points="all", **common)
@@ -643,7 +654,7 @@ with tab_free:
                                file_name="imine_selection.csv", mime="text/csv")
 
 # ============================== 7. Design rules ==============================
-with tab_rules:
+if page == page_names[6]:
     st.caption("Rules 1–3 come from the 42 measured values; rule 4 comes from derived data and is a hypothesis to test.")
     amine_med = anchors.groupby("amine_name")["k"].median().reindex(AMINE_ORDER)
     best_beta = betas[best_name]

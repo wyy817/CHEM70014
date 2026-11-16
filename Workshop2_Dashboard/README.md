@@ -30,9 +30,11 @@ The app opens at <http://localhost:8501>.
 
 > **Important:** only the **42 values at 25 °C / 60 min** behave like independent measurements. Every other row is a deterministic function of the same reaction's 25 °C / 60 min value: reactions with equal anchor values have identical curves at every time and temperature. The *Data check* tab shows the evidence. The dashboard therefore draws chemical conclusions from the 42 measured values and labels everything else as *derived*.
 
-## What each tab answers
+## What each page answers
 
-| Tab | Question it answers |
+Pages are selected from the sidebar.
+
+| Page | Question it answers |
 |---|---|
 | 🔍 Data check | How much independent information is in the data? |
 | 🗺️ Reactivity map | Which aldehyde–amine–solvent combinations react well? |

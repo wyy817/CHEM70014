@@ -219,7 +219,58 @@ PAGES = {
     "🔮 Predict": "Model + validation",
     "🧭 Explore freely": "Build your own chart",
     "📋 Design rules & data": "Summary + downloads",
+    "📖 Glossary": "Terms in plain language",
 }
+
+GLOSSARY = pd.DataFrame([
+    # Term, plain meaning, example / how to read it, where it appears
+    ("Chemistry", "Imine condensation", "Aldehyde + amine → imine (a C=N bond) + water.",
+     "Ar–CHO + Bu–NH₂ → Ar–CH=N–Bu + H₂O", "Everywhere"),
+    ("Chemistry", "Conversion (%)", "How much of the aldehyde has turned into imine.",
+     "90% = almost finished; 5% = barely started", "Every chart"),
+    ("Chemistry", "R group (para substituent)", "The group on the benzene ring opposite the CHO.",
+     "NH₂, OMe, CH₃, H, Cl, CF₃, NO₂", "Reactivity map, Effects"),
+    ("Chemistry", "Electron-donating / -withdrawing", "Pushes electrons into the ring / pulls them out.",
+     "Donors: NH₂, OMe. Acceptors: Cl, CF₃, NO₂", "Effects"),
+    ("Chemistry", "Steric hindrance", "Bulky groups get in the way of the reacting atom.",
+     "n-butyl (least bulky) < sec-butyl < tert-butyl (most)", "Effects · 1"),
+    ("Chemistry", "Hemiaminal", "The short-lived intermediate between the starting materials and the imine.",
+     "Ar–CH(OH)–NH–R′", "Effects · mechanism"),
+    ("Chemistry", "Rate-limiting step", "The slowest step, which sets the overall speed.",
+     "Step 1 (addition) or step 2 (losing water)", "Effects · mechanism"),
+    ("Chemistry", "DCM / MTBE", "The two solvents compared.",
+     "DCM = dichloromethane (chlorinated, more toxic); MTBE = greener ether", "Effects · 3"),
+    ("Kinetics", "Rate constant k", "A single number for how fast a reaction is (per minute).",
+     "Estimated as k = −ln(1 − X)/t; bigger k = faster", "Effects, Predict"),
+    ("Kinetics", "Activation energy Ea", "How strongly the rate rises when you heat the reaction.",
+     "~34 kJ/mol here ⇒ about 2.5× faster from 15 to 35 °C", "Time & temperature"),
+    ("Kinetics", "First / second order", "Mathematical shapes of a conversion-vs-time curve.",
+     "Lower fitting error = the shape describes the data better", "Time & temperature"),
+    ("Hammett", "Hammett σₚ", "A number for how strongly a para group withdraws electrons.",
+     "Negative = donor, 0 = H, positive = acceptor", "Effects · 2, Predict"),
+    ("Hammett", "Hammett plot / ρ", "Relative rate (log scale) plotted against σₚ; ρ is the slope.",
+     "ρ > 0: acceptors speed the reaction up", "Effects · 2"),
+    ("Hammett", "Concave Hammett plot", "The line bends downwards instead of being straight.",
+     "The speed-up from stronger acceptors levels off", "Effects · 2, Design rules"),
+    ("Data", "Measured vs derived", "Measured = the 42 values at 25 °C / 60 min; derived = all other rows, calculated from them.",
+     "★ = measured, ● = derived in charts", "Data check, Explore"),
+    ("Data", "Anchor value", "A reaction's measured conversion at 25 °C / 60 min.",
+     "Every derived value is a function of this number", "Data check"),
+    ("Data", "pp (percentage points)", "The difference between two percentages.",
+     "60% → 70% is +10 pp (not +10%)", "Effects, Predict"),
+    ("Data", "Paired comparison", "Comparing two reactions that differ in only one factor.",
+     "Same aldehyde + amine, DCM vs MTBE", "Effects · 3"),
+    ("Model", "Physics-informed model", "A model whose terms follow chemical laws (Hammett, first-order kinetics), not a black box.",
+     "Its coefficients have a chemical meaning, e.g. ρ", "Predict"),
+    ("Model", "Leave-one-aldehyde-out validation", "Train without one aldehyde, then predict it; repeat for all 7.",
+     "Tests 'can we predict an aldehyde never run before?'", "Predict"),
+    ("Model", "MAE (mean absolute error)", "Average size of the prediction error.",
+     "MAE 12 pp: predictions are off by about 12 points on average", "Predict"),
+    ("Model", "Training vs held-out error", "Error on data the model has seen vs data it has not.",
+     "Held-out error is the honest one", "Predict"),
+    ("Model", "Parity plot", "Predicted vs measured; perfect predictions sit on the diagonal.",
+     "Points far from the line = poor predictions", "Predict"),
+], columns=["Category", "Term", "Plain meaning", "Example / how to read it", "Where you see it"])
 
 with st.sidebar:
     st.header("🧪 Imine explorer")
@@ -233,28 +284,7 @@ with st.sidebar:
         "measurements. Every other value is a fixed function of that one number (see *Data check*). "
         "Charts mark derived data clearly."
     )
-    with st.expander("📖 Glossary (plain language)"):
-        st.markdown(
-            "- **Imine condensation**: aldehyde + amine → imine (C=N bond) + water.\n"
-            "- **Conversion (%)**: share of the aldehyde that has turned into imine.\n"
-            "- **pp (percentage points)**: difference between two percentages, e.g. 60% → 70% is +10 pp.\n"
-            "- **R group / para substituent**: the group opposite the CHO on the benzene ring.\n"
-            "- **Electron-donating / -withdrawing**: pushes electron density into the ring (NH₂, OMe) "
-            "or pulls it out (Cl, CF₃, NO₂).\n"
-            "- **Hammett σₚ**: a number for how strongly a para group withdraws electrons. "
-            "Negative = donor, 0 = H, positive = acceptor.\n"
-            "- **Hammett plot / ρ**: log of relative rate vs σₚ. The slope ρ says how sensitive the reaction "
-            "is to electronics; ρ > 0 means acceptors speed it up.\n"
-            "- **Steric hindrance**: bulky groups physically blocking the reacting atom "
-            "(n-butyl < sec-butyl < tert-butyl).\n"
-            "- **Rate constant k**: how fast a reaction goes; here estimated from one conversion value, k = −ln(1 − X)/t.\n"
-            "- **Activation energy Ea**: how strongly the rate increases with temperature.\n"
-            "- **Measured vs derived**: measured = the 42 values at 25 °C / 60 min; derived = all other rows, "
-            "calculated from those 42.\n"
-            "- **DCM / MTBE**: dichloromethane (chlorinated, more toxic) / methyl tert-butyl ether (greener alternative).\n"
-            "- **Held-out (cross-validation) error**: how wrong the model is on an aldehyde it was not trained on, "
-            "the honest estimate of prediction quality."
-        )
+    st.caption("New to the terms? Open **📖 Glossary** at the bottom of the list.")
 
 st.title("🧪 Imine condensation explorer")
 st.caption("Aldehyde + amine → imine + H₂O. Goal: find design rules for reactivity and predict untested reactions.")
@@ -448,25 +478,40 @@ if page == page_names[2]:
     q1.metric("ρ (linear slope)", f"{rho_lin:+.2f}")
     q2.metric(f"R² ({h_fit.lower()})", f"{r2:.2f}")
     if deg == 2:
-        q3.metric("Curvature", "concave ∩" if coef[0] < 0 else "convex ∪", f"{coef[0]:+.2f}")
+        q3.metric("Curvature (σₚ² coefficient)", f"{coef[0]:+.2f} ({'concave ∩' if coef[0] < 0 else 'convex ∪'})")
     st.caption("k is the effective first-order rate constant from the 60 min conversion, k = −ln(1 − X)/t. "
                "Positive ρ: electron-withdrawing groups make the carbonyl carbon more electrophilic and speed up amine attack. "
                "Very low conversions (tert-butylamine, < 2%) are reported only to 0.1–1%, so their k is imprecise.")
 
     st.subheader("3 · Solvent: can MTBE replace DCM?")
-    sol_fig = px.scatter(paired, x="DCM", y="MTBE", color="amine_name", text="aldehyde_R_group",
-                         category_orders=ORDERS, labels={"DCM": "Conversion in DCM (%)",
-                                                         "MTBE": "Conversion in MTBE (%)", **LABELS})
-    sol_fig.update_traces(textposition="top center", marker=dict(size=10))
-    sol_fig.add_scatter(x=[0, 100], y=[0, 100], mode="lines", line=dict(dash="dash", color="grey"), name="equal")
-    sol_fig.update_layout(xaxis_range=[-3, 103], yaxis_range=[-3, 103])
+    # Dumbbell chart: one row per aldehyde–amine pair, DCM and MTBE joined by a line
+    short = {"n-butylamine": "n-Bu", "sec-butylamine": "sec-Bu", "tert-butylamine": "tert-Bu"}
+    db = paired.copy()
+    db["pair"] = db["aldehyde_R_group"] + " + " + db["amine_name"].map(short)
+    db["amine_rank"] = db["amine_name"].map({a: i for i, a in enumerate(AMINE_ORDER)})
+    db = db.sort_values(["amine_rank", "DCM"], ascending=[False, True])
+    sol_fig = go.Figure()
+    for better, colour, name in [(True, "#2ca02c", "MTBE ≥ DCM"), (False, "#d62728", "MTBE < DCM")]:
+        xs, ys = [], []
+        for _, r in db[(db["MTBE"] >= db["DCM"]) == better].iterrows():
+            xs += [r["DCM"], r["MTBE"], None]
+            ys += [r["pair"], r["pair"], None]
+        sol_fig.add_scatter(x=xs, y=ys, mode="lines", line=dict(color=colour, width=3), name=name)
+    sol_fig.add_scatter(x=db["DCM"], y=db["pair"], mode="markers", name="DCM",
+                        marker=dict(size=11, color="#7f7f7f", symbol="circle"))
+    sol_fig.add_scatter(x=db["MTBE"], y=db["pair"], mode="markers", name="MTBE",
+                        marker=dict(size=11, color="#1f77b4", symbol="diamond"))
+    sol_fig.update_layout(height=620, xaxis_title="Conversion at 25 °C, 60 min (%)", xaxis_range=[-2, 102],
+                          yaxis=dict(categoryorder="array", categoryarray=db["pair"].tolist()),
+                          legend=dict(orientation="h", y=1.04, x=0))
     st.plotly_chart(sol_fig, width="stretch")
     w1, w2, w3 = st.columns(3)
     w1.metric("MTBE ≥ DCM", f"{(diff >= 0).sum()} of {len(diff)} pairs")
     w2.metric("Median difference", f"{diff.median():+.0f} pp")
     w3.metric("Median rate ratio k(MTBE)/k(DCM)", f"{ratio.median():.2f}×")
-    st.caption("Points above the dashed line react faster in MTBE. The solvent effect is not uniform: "
-               "it depends on the aldehyde–amine pair.")
+    st.caption("Each row is one aldehyde–amine pair: grey ● = DCM, blue ◆ = MTBE. A green bar means MTBE is at least as good, "
+               "a red bar means DCM is better. Rows are grouped by amine (tert-Bu at the bottom). "
+               "The solvent effect is not uniform: it depends on the pair.")
 
 # ============================== 4. Time & temperature ==============================
 if page == page_names[3]:
@@ -697,3 +742,20 @@ if page == page_names[6]:
         st.dataframe(full, width="stretch", hide_index=True)
         st.download_button("Download full dataset (CSV)", full.to_csv(index=False).encode("utf-8"),
                            file_name="imine_full_with_anchor.csv", mime="text/csv")
+
+
+# ============================== 8. Glossary ==============================
+if page == page_names[7]:
+    st.markdown("Plain-language definitions of every technical term used in this dashboard.")
+    g1, g2 = st.columns([2, 3])
+    categories = g1.multiselect("Category", GLOSSARY["Category"].unique().tolist(),
+                                default=GLOSSARY["Category"].unique().tolist(), key="gl_cat")
+    query = g2.text_input("Search", placeholder="e.g. Hammett, rate, MAE", key="gl_q")
+    shown_terms = GLOSSARY[GLOSSARY["Category"].isin(categories)]
+    if query:
+        mask = shown_terms.apply(lambda r: r.astype(str).str.contains(query, case=False).any(), axis=1)
+        shown_terms = shown_terms[mask]
+    if shown_terms.empty:
+        st.info("No terms match.")
+    else:
+        st.table(shown_terms.set_index("Term"))
